@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雙子探險：SPYxFAMILY伊甸學園篇 (RWD Edition)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Roboto:wght@700&display=swap');
+
+        body {
+            background-color: #1a0505;
+            color: #f7d794;
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            /* 為了嵌入網頁，將 height 改為 min-height 並移除 overflow:hidden */
+            min-height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 95%; /* 手機版保留一點邊距 */
+            max-width: 960px;
+            /* 核心：保持 4:3 比例，防止四周被吃掉 */
+            aspect-ratio: 4 / 3; 
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.2);
+            border: 4px solid #594a2a; 
+            background-color: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+            object-fit: contain; /* 確保畫布內容不變形且完整顯示 */
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 2%;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 4%;
+            box-sizing: border-box;
+            pointer-events: none;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+            font-family: 'Cinzel', serif;
+            z-index: 5;
+        }
+
+        .status-box {
+            background: linear-gradient(135deg, #2c0b0e, #000);
+            padding: 5px 12px;
+            border-radius: 4px;
+            border: 2px solid #b7950b;
+            /* 文字隨螢幕縮放 */
+            font-size: clamp(14px, 2.5vw, 20px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(20, 5, 5, 0.92);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            z-index: 10;
+            border: 4px inset #b7950b;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #ffd700;
+            margin-bottom: 15px;
+            font-size: clamp(24px, 5vw, 42px);
+            font-family: 'Cinzel', serif;
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+            letter-spacing: 2px;
+        }
+
+        p {
+            font-size: clamp(12px, 2vw, 16px);
+            color: #e0e0e0;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            max-width: 90%;
+        }
+
+        .btn {
+            background: linear-gradient(to bottom, #b7950b, #8a6e05);
+            color: #1a0505;
+            border: 2px solid #ffd700;
+            padding: 10px 30px;
+            border-radius: 2px;
+            font-family: 'Cinzel', serif;
+            font-size: clamp(16px, 3vw, 20px);
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(183, 149, 11, 0.4);
+            transition: all 0.1s;
+            text-transform: uppercase;
+        }
+
+        .controls-info {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.4);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .key-badge {
+            display: inline-block;
+            background: #3e2723;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin: 2px;
+            border: 1px solid #8d6e63;
+            color: #fff;
+            font-size: 12px;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="ui-layer">
+            <div class="status-box">MISSION: <span id="level-display" style="color: #4cc9f0;">1</span>/10</div>
+            <div class="status-box">STAR: <span id="keys-display" style="color: #ffd700;">0/0</span></div>
+        </div>
+        
+        <div id="notification-area"></div>
+
+        <div id="start-screen">
+            <div id="overlay">
+                <div style="position: absolute; top: 10px; right: 15px; color: #ffd700; font-size: 12px; font-weight: bold; opacity: 0.9;">
+                    設計者: 陳柏曄
+                </div>
+                <h1>雙子探險：伊甸學園篇<br><span style="font-size: 0.6em; color: #aaa;">SPY x FAMILY Edition</span></h1>
+                <div class="controls-info">
+                    <div class="control-group">
+                        <h3 style="color: #ff99cc; font-size: 14px;">安妮亞 (Anya)</h3>
+                        <div><span class="key-badge">W</span></div>
+                        <div><span class="key-badge">A</span><span class="key-badge">S</span><span class="key-badge">D</span></div>
+                    </div>
+                    <div class="control-group">
+                        <h3 style="color: #aaddff; font-size: 14px;">彭德 (Bond)</h3>
+                        <div><span class="key-badge">↑</span></div>
+                        <div><span class="key-badge">←</span><span class="key-badge">↓</span><span class="key-badge">→</span></div>
+                    </div>
+                </div>
+                <p>
+                    <span style="color: #ffd700">任務目標：</span>收集所有的 <span style="color:#ffd700">★星星</span> 並優雅地抵達出口。<br><br>
+                    <span class="warning-text">注意：</span>韓德森老師正在巡邏！<br>
+                    任何「不優雅」的碰撞都會導致個別被遣返起點。
+                </p>
+                <button class="btn" onclick="startGame()">MISSION START</button>
+            </div>
+        </div>
+
+        <div id="level-screen" class="hidden">
+            <div id="overlay">
+                <h1 style="color: #e53e3e">ELEGANT!</h1>
+                <p>你們展現了驚人的優雅！</p>
+                <button class="btn" onclick="nextLevel()">NEXT MISSION</button>
+            </div>
+        </div>
+
+        <div id="victory-screen" class="hidden">
+            <div id="overlay">
+                <h1 style="color: #ffd700">IMPERIAL SCHOLAR!</h1>
+                <p>恭喜！你們已經獲得了所有的星星，<br>成為了伊甸學園的皇帝的學徒！</p>
+                <button class="btn" onclick="restartGame()">PLAY AGAIN</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- 響應式核心邏輯 ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
+        // 無論畫布被 CSS 縮放到多大，內部的繪圖座標系統鎖定在 960x720
+        canvas.width = 960;
+        canvas.height = 720;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // --- 以下為您原本的遊戲 logic (已保持原樣確保功能正常) ---
+    const TILE_SIZE = 40;
+    const ROWS = 18; 
+    const COLS = 24;
+    const GRAVITY = 0.6;
+    const MOVE_SPEED = 5;
+    const JUMP_STRENGTH = 17;
+    const TERMINAL_VELOCITY = 12;
+    const ENEMY_SPEED = 2;
+    const JUMP_BUFFER_TIME = 10;
+    const COYOTE_TIME = 6;
+        const PALETTE = {
+        wallBase: '#3e2723', // Dark wood/brick
+        wallHighlight: '#5d4037',
+        wallShadow: '#281a17',
+        bgGradientTop: '#2c0b0e', // Eden Red Dark
+        bgGradientBot: '#1a0505',
+        star: '#ffd700',
+        starGlow: 'rgba(255, 215, 0, 0.6)',
+        doorClosed: '#800000', // Deep Red Door
+        doorOpen: '#2ecc71',
+        spike: '#7f8c8d', // Metallic spikes
+        teacher: '#2c3e50', // Suit
+        teacherSkin: '#f1c40f', // Just highlight
+        anyaHair: '#ff99cc',
+        anyaDress: '#1a1a1a',
+        bondFur: '#ecf0f1'
+    };
+
+    let currentLevelIdx = 0;
+    let keysCollected = 0;
+    let totalKeys = 0;
+    let gameState = 'START';
+    let keysPressed = {}; 
+    let enemies = []; 
+
+    // Character Dimensions
+    let p1 = { x: 0, y: 0, width: 22, height: 36, vx: 0, vy: 0, onGround: false, label: 'Anya', facingRight: true, jumpBuffer: 0, coyoteTimer: 0 };
+    let p2 = { x: 0, y: 0, width: 34, height: 36, vx: 0, vy: 0, onGround: false, label: 'Bond', facingRight: true, jumpBuffer: 0, coyoteTimer: 0 };
+    
+    let p1Spawn = { x: 0, y: 0 };
+    let p2Spawn = { x: 0, y: 0 };
+
+    // Map Symbols: 
+    // # = Wall, . = Air, 1 = P1, 2 = P2, S = Star, D = Door, X = Spike, E = Enemy
+    // - = Wall variant
+    
+    // --- LEVELS: WIDE SPACING & SAFE PATHS ---
+    const rawLevels = [
+        // Level 1: Intro - Fixed Floor Gap
+        [
+            "########################",
+            "#1....................2#",
+            "#......................#", 
+            "#......................#", 
+            "#######............#####",
+            "#......................#",
+            "#......................#",
+            "#S.........E..........S#", 
+            "#####..##########..#####",
+            "#......................#",
+            "#......................#",
+            "#...E..............E...#", 
+            "#########......#########", // GAP here
+            "#...........S..........#",
+            "#........#####.........#", 
+            "#......................#", 
+            "#..........D...........#", 
+            "########################"
+        ],
+        // Level 2: Steps
+        [
+            "########################",
+            "#S........#...........D#", 
+            "#.........#............#",
+            "###..##############..###",
+            "#......................#",
+            "#......................#",
+            "#.........E............#",
+            "#####..#######..########",
+            "#......................#",
+            "#......................#",
+            "#.......E..............#",
+            "#1...######..######...2#",
+            "####........S......#####",
+            "#.........####.........#",
+            "#..........##..........#",
+            "#....E.....##.....E....#", 
+            "#S.........##..........#",
+            "###########-############"
+        ],
+        // Level 3: Gym
+        [
+            "########################",
+            "#1....................2#",
+            "#####...########...#####",
+            "#......................#",
+            "#...S......E.......S...#",
+            "#..####..######..####..#",
+            "#..........S...........#",
+            "###.................#.##",
+            "#...............E......#",
+            "###..######..######..###",
+            "#......................#", 
+            "#.........E#...E.......#",
+            "#S...######..######....#",
+            "###.................####",
+            "#......................#", 
+            "#..........D...........#", 
+            "#..XXX....###.....XXX..#",
+            "###########-############"
+        ],
+        // Level 4: Courtyard - Fixed Door Access
+        [
+            "########################",
+            "#1..........S.........2#",
+            "#####...########...#####",
+            "#......................#",
+            "#...S..............S...#",
+            "#..####..........####..#",
+            "#...........E..........#",
+            "###......######......###",
+            "#......................#", 
+            "#...E...............E..#",
+            "#######....D.....#######", // Door has headroom
+            "#.........###..........#", 
+            "#..........#...........#",
+            "#..####..XXXXXX..####..#", 
+            "#......................#",
+            "#S.#................#.S#",
+            "####..E..........E..####", 
+            "########################"
+        ],
+        // Level 5: Clock Tower - Fixed Bottom Floor
+        [
+            "###########-############",
+            "#1.........D..........2#",
+            "#####..##########..#####",
+            "#..........S...........#",
+            "#......................#", 
+            "###..####..##..####..###",
+            "#..........##..........#",
+            "#...S......##......S...#",
+            "#..........##..........#",
+            "#########..##..#########",
+            "#..........##..........#",
+            "#..........##..........#",
+            "#....E.....##.....E....#",
+            "#########..##..#########",
+            "#..........##..........#",
+            "#..........##..........#",
+            "#S......E..##....E....S#", 
+            "########################" // Solid Floor
+        ],
+         // Level 6: Dorms
+        [
+            "########################",
+            "#S.........1..........S#",
+            "#......................#",
+            "#......................#",
+            "######..#######..#######", 
+            "#......................#",
+            "#S..E.............E....#",
+            "#......................#",
+            "######..#######..#######", 
+            "#......................#",
+            "#......................#",
+            "#.......#.....#.....S..#",
+            "######..#.....#..#######", 
+            "#.......#.....#........#",
+            "#...E...#..D..#...E....#", 
+            "#.......#..#..#........#",
+            "#..........2...........#",
+            "########################"
+        ],
+        // Level 7: Science Lab - Fixed & Safe
+        [
+            "########################",
+            "#1..S..............S..2#",
+            "#......................#",
+            "#...........E..........#",
+            "#######..######..#######",
+            "#......................#",
+            "#...E..............E...#",
+            "#......................#",
+            "#...###..######..###...#", 
+            "#......................#",
+            "#..........D...........#", 
+            "#.........###..........#", 
+            "#...#..##########..#...#", 
+            "#......................#",
+            "#......................#", 
+            "#..#.......X........#..#",
+            "#S.#...E..###..E....#.S#",
+            "########################"
+        ],
+         // Level 8: Art Room - Fixed Spawn Trap
+        [
+            "########################",
+            "#1....................2#",
+            "######............######", // Open floor
+            "#S..........E.........S#",
+            "#.....############.....#",
+            "###..................###",
+            "#......................#",
+            "#..........E...........#",
+            "###...############...###",
+            "#......................#",
+            "#......................#",
+            "#S.........E..........S#",
+            "###...############...###",
+            "#......................#",
+            "#......................#",
+            "#..........#...........#",
+            "#....D....XXX.....E....#", 
+            "########################"
+        ],
+        // Level 9: Headmaster
+        [
+            "########################",
+            "#1.........S..........2#",
+            "#......................#",
+            "#......................#",
+            "##########....##########",
+            "#......................#",
+            "#......................#",
+            "#.....E..........E.....#",
+            "##########....##########",
+            "#......................#",
+            "#.........####.........#",
+            "#S...E.....##......E..S#",
+            "#######....##....#######",
+            "#......................#",
+            "#..........D...........#", 
+            "#.....E...###....E.....#", 
+            "#..........#...........#",
+            "########################"
+        ],
+        // Level 10: Exam
+        [
+            "########################",
+            "#1....................2#",
+            "#...........E..........#",
+            "###......#######.....###",
+            "#....#.....S......#....#",
+            "#....#............#....#",
+            "#....#.....E......#....#",
+            "#....##############....#",
+            "#......................#",
+            "#......................#",
+            "#......#...S....#......#",
+            "#......#....E...#......#",
+            "#####..##########..#####", 
+            "#......................#",
+            "#......................#",
+            "#...E.....D.......E....#",
+            "#...S....##.X.....S....#", 
+            "########################"
+        ]
+    ];
+
+    let currentMap = [];
+
+    // --- Core Logic ---
+
+    function init() {
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+             if(["arrowup","arrowdown","arrowleft","arrowright","space", "w","a","s","d"].indexOf(key) > -1) {
+                e.preventDefault();
+            }
+            keysPressed[key] = true; 
+            
+            if (gameState === 'PLAYING') {
+                if (key === 'w') p1.jumpBuffer = JUMP_BUFFER_TIME;
+                if (key === 'arrowup') p2.jumpBuffer = JUMP_BUFFER_TIME;
+            }
+        });
+        window.addEventListener('keyup', (e) => { keysPressed[e.key.toLowerCase()] = false; });
+
+        document.getElementById('start-screen').classList.remove('hidden');
+        document.getElementById('level-screen').classList.add('hidden');
+        document.getElementById('victory-screen').classList.add('hidden');
+    }
+
+    function startGame() {
+        currentLevelIdx = 0;
+        loadLevel(currentLevelIdx);
+        document.getElementById('start-screen').classList.add('hidden');
+        gameState = 'PLAYING';
+        requestAnimationFrame(gameLoop);
+    }
+
+    function loadLevel(idx) {
+        if (idx >= rawLevels.length) {
+            gameVictory();
+            return;
+        }
+
+        const template = rawLevels[idx];
+        currentMap = [];
+        enemies = [];
+        keysCollected = 0;
+        totalKeys = 0;
+
+        // Reset physics
+        p1.vx = 0; p1.vy = 0; p1.facingRight = true; p1.onGround = false; p1.jumpBuffer = 0; p1.coyoteTimer = 0;
+        p2.vx = 0; p2.vy = 0; p2.facingRight = true; p2.onGround = false; p2.jumpBuffer = 0; p2.coyoteTimer = 0;
+
+        // Parse Map
+        for (let r = 0; r < ROWS; r++) {
+            let rowString = (template[r] || "########################"); 
+            let row = rowString.split('');
+            let mapRow = [];
+            
+            for (let c = 0; c < COLS; c++) {
+                let char = row[c] || '#';
+                let tileType = '.'; 
+
+                if (char === '-') {
+                    tileType = '#';
+                }
+
+                if (char === '1') {
+                    p1.x = c * TILE_SIZE + (TILE_SIZE - p1.width)/2;
+                    p1.y = (r + 1) * TILE_SIZE - p1.height - 2; 
+                    p1Spawn = { x: p1.x, y: p1.y };
+                } else if (char === '2') {
+                    p2.x = c * TILE_SIZE + (TILE_SIZE - p2.width)/2;
+                    p2.y = (r + 1) * TILE_SIZE - p2.height - 2;
+                    p2Spawn = { x: p2.x, y: p2.y };
+                } else if (char === 'S') { 
+                    totalKeys++;
+                    tileType = 'S';
+                } else if (char === 'E') { 
+                    enemies.push({
+                        x: c * TILE_SIZE + 5,
+                        y: r * TILE_SIZE + 2, 
+                        width: 30,
+                        height: 38,
+                        vx: ENEMY_SPEED,
+                        patrolStart: c * TILE_SIZE
+                    });
+                    tileType = '.';
+                } else {
+                    tileType = (tileType === '.') ? char : tileType; // Keep #, X, D, .
+                }
+                mapRow.push(tileType);
+            }
+            currentMap.push(mapRow);
+        }
+        
+        // --- SNAP ENEMIES TO GROUND ---
+        enemies.forEach(enemy => {
+            let col = Math.floor((enemy.x + enemy.width/2) / TILE_SIZE);
+            let row = Math.floor(enemy.y / TILE_SIZE);
+            
+            for (let r = row; r < ROWS; r++) {
+                let checkTile = currentMap[r] ? currentMap[r][col] : '.';
+                if (checkTile === '#' || checkTile === 'D' || checkTile === '-') {
+                    enemy.y = r * TILE_SIZE - enemy.height;
+                    break;
+                }
+            }
+        });
+
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('level-display').innerText = currentLevelIdx + 1;
+        const keyText = document.getElementById('keys-display');
+        keyText.innerText = `${keysCollected}/${totalKeys}`;
+        keyText.style.color = (keysCollected === totalKeys) ? '#ffd700' : 'white';
+    }
+
+    function resetLevel() {
+        // No full reset, handled individually
+    }
+    
+    function showRespawnNotification(name) {
+        const area = document.getElementById('notification-area');
+        const msg = document.createElement('div');
+        msg.className = 'respawn-msg';
+        msg.innerText = `NOT ELEGANT! ${name} 被遣返！`;
+        area.appendChild(msg);
+        setTimeout(() => { if(msg.parentNode) msg.parentNode.removeChild(msg); }, 2000);
+    }
+
+    function update() {
+        if (gameState !== 'PLAYING') return;
+
+        p1.vx = 0;
+        if (keysPressed['a']) { p1.vx = -MOVE_SPEED; p1.facingRight = false; }
+        if (keysPressed['d']) { p1.vx = MOVE_SPEED; p1.facingRight = true; }
+
+        p2.vx = 0;
+        if (keysPressed['arrowleft']) { p2.vx = -MOVE_SPEED; p2.facingRight = false; }
+        if (keysPressed['arrowright']) { p2.vx = MOVE_SPEED; p2.facingRight = true; }
+
+        updatePlayerPhysics(p1);
+        updatePlayerPhysics(p2);
+        updateEnemies();
+        checkInteractions();
+    }
+
+    function updatePlayerPhysics(player) {
+        if (player.jumpBuffer > 0) player.jumpBuffer--;
+        if (player.onGround) player.coyoteTimer = COYOTE_TIME;
+        else if (player.coyoteTimer > 0) player.coyoteTimer--;
+
+        if (player.jumpBuffer > 0 && player.coyoteTimer > 0) {
+            player.vy = -JUMP_STRENGTH;
+            player.jumpBuffer = 0;
+            player.coyoteTimer = 0;
+            player.onGround = false;
+        }
+
+        player.vy += GRAVITY;
+        if(player.vy > TERMINAL_VELOCITY) player.vy = TERMINAL_VELOCITY;
+
+        player.x += player.vx;
+        checkMapCollision(player, 'x');
+
+        player.onGround = false; 
+        player.y += player.vy;
+        checkMapCollision(player, 'y');
+
+        if (player.x < 0) player.x = 0;
+        if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+        
+        if (player.y > canvas.height) {
+             respawnPlayer(player);
+        }
+    }
+    
+    function respawnPlayer(player) {
+        if (player === p1) {
+            p1.x = p1Spawn.x; p1.y = p1Spawn.y; p1.vx = 0; p1.vy = 0;
+            showRespawnNotification("安妮雅");
+        } else {
+            p2.x = p2Spawn.x; p2.y = p2Spawn.y; p2.vx = 0; p2.vy = 0;
+            showRespawnNotification("彭德");
+        }
+    }
+
+    function isGround(tile) {
+        return tile === '#' || tile === 'D' || tile === '-';
+    }
+
+    function updateEnemies() {
+        for (let enemy of enemies) {
+            let nextX = enemy.x + enemy.vx;
+            let leftTile = Math.floor(nextX / TILE_SIZE);
+            let rightTile = Math.floor((nextX + enemy.width) / TILE_SIZE);
+            let centerTileY = Math.floor((enemy.y + enemy.height/2) / TILE_SIZE);
+            let footTileY = Math.floor((enemy.y + enemy.height + 2) / TILE_SIZE); 
+
+            let hitWall = false;
+            let aboutToFall = false;
+
+            if (nextX <= 0 || nextX + enemy.width >= canvas.width) hitWall = true;
+            else {
+                if (enemy.vx < 0 && currentMap[centerTileY] && currentMap[centerTileY][leftTile] === '#') hitWall = true;
+                else if (enemy.vx > 0 && currentMap[centerTileY] && currentMap[centerTileY][rightTile] === '#') hitWall = true;
+                
+                // Allow walking on floors (#), doors (D), and variants (-)
+                if (currentMap[footTileY]) {
+                    if (enemy.vx < 0 && !isGround(currentMap[footTileY][leftTile])) aboutToFall = true;
+                    if (enemy.vx > 0 && !isGround(currentMap[footTileY][rightTile])) aboutToFall = true;
+                }
+            }
+
+            if (hitWall || aboutToFall) enemy.vx *= -1;
+            else enemy.x = nextX;
+
+            if (rectIntersect(p1.x, p1.y, p1.width, p1.height, enemy.x, enemy.y, enemy.width, enemy.height)) respawnPlayer(p1);
+            if (rectIntersect(p2.x, p2.y, p2.width, p2.height, enemy.x, enemy.y, enemy.width, enemy.height)) respawnPlayer(p2);
+        }
+    }
+
+    function checkMapCollision(player, axis) {
+        let leftTile = Math.floor(player.x / TILE_SIZE);
+        let rightTile = Math.floor((player.x + player.width - 0.1) / TILE_SIZE);
+        let topTile = Math.floor(player.y / TILE_SIZE);
+        let bottomTile = Math.floor((player.y + player.height - 0.1) / TILE_SIZE);
+
+        leftTile = Math.max(0, leftTile); rightTile = Math.min(COLS-1, rightTile);
+        topTile = Math.max(0, topTile); bottomTile = Math.min(ROWS-1, bottomTile);
+
+        for (let r = topTile; r <= bottomTile; r++) {
+            for (let c = leftTile; c <= rightTile; c++) {
+                let tile = currentMap[r][c];
+                if (tile === '#' || tile === '-') { 
+                     if (axis === 'x') {
+                         if (player.vx > 0) player.x = c * TILE_SIZE - player.width;
+                         else if (player.vx < 0) player.x = (c + 1) * TILE_SIZE;
+                         player.vx = 0;
+                     } else if (axis === 'y') {
+                         if (player.vy > 0) {
+                             player.y = r * TILE_SIZE - player.height;
+                             player.onGround = true;
+                             player.vy = 0;
+                         } else if (player.vy < 0) {
+                             player.y = (r + 1) * TILE_SIZE;
+                             player.vy = 0;
+                         }
+                     }
+                }
+                if (tile === 'X') {
+                    if (rectIntersect(player.x + 8, player.y + 10, player.width - 16, player.height - 10, 
+                                      c * TILE_SIZE + 5, r * TILE_SIZE + 15, TILE_SIZE - 10, TILE_SIZE - 15)) {
+                        respawnPlayer(player); 
+                    }
+                }
+            }
+        }
+    }
+
+    function rectIntersect(x1, y1, w1, h1, x2, y2, w2, h2) {
+        return x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
+    }
+
+    function checkInteractions() {
+        checkPlayerInteraction(p1);
+        checkPlayerInteraction(p2);
+
+        if (keysCollected >= totalKeys) {
+            let p1Tile = getTileAtCenter(p1);
+            let p2Tile = getTileAtCenter(p2);
+
+            if (isDoor(p1Tile) && isDoor(p2Tile)) {
+                 gameState = 'LEVEL_END';
+                 setTimeout(showLevelComplete, 100);
+            }
+        }
+    }
+    
+    function isDoor(tile) {
+        return tile === 'D';
+    }
+
+    function getTileAtCenter(player) {
+        let cx = player.x + player.width/2;
+        let cy = player.y + player.height/2;
+        let r = Math.floor(cy/TILE_SIZE);
+        let c = Math.floor(cx/TILE_SIZE);
+        if(r >=0 && r < ROWS && c >= 0 && c < COLS) return currentMap[r][c];
+        return null;
+    }
+
+    function checkPlayerInteraction(player) {
+        let r = Math.floor((player.y + player.height/2) / TILE_SIZE);
+        let c = Math.floor((player.x + player.width/2) / TILE_SIZE);
+
+        if(r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+            if (currentMap[r][c] === 'S') {
+                currentMap[r][c] = '.';
+                keysCollected++;
+                updateUI();
+            }
+        }
+    }
+
+    function showLevelComplete() {
+        if (currentLevelIdx === rawLevels.length - 1) {
+            gameVictory();
+        } else {
+            document.getElementById('level-screen').classList.remove('hidden');
+        }
+    }
+
+    function nextLevel() {
+        currentLevelIdx++;
+        document.getElementById('level-screen').classList.add('hidden');
+        gameState = 'PLAYING';
+        loadLevel(currentLevelIdx);
+        requestAnimationFrame(gameLoop);
+    }
+
+    function gameVictory() {
+        gameState = 'VICTORY';
+        document.getElementById('victory-screen').classList.remove('hidden');
+        document.getElementById('level-screen').classList.add('hidden');
+    }
+
+    function restartGame() {
+        document.getElementById('victory-screen').classList.add('hidden');
+        startGame();
+    }
+
+    // --- High Fidelity Rendering ---
+    function draw() {
+        // Draw Eden Academy Background Pattern
+        let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grad.addColorStop(0, PALETTE.bgGradientTop);
+        grad.addColorStop(1, PALETTE.bgGradientBot);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Add subtle elegant pattern (diamond)
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.03)';
+        for(let i=0; i<canvas.width; i+=100) {
+            for(let j=0; j<canvas.height; j+=100) {
+                ctx.beginPath();
+                ctx.moveTo(i + 50, j);
+                ctx.lineTo(i + 100, j + 50);
+                ctx.lineTo(i + 50, j + 100);
+                ctx.lineTo(i, j + 50);
+                ctx.fill();
+            }
+        }
+
+        for (let y = 0; y < ROWS; y++) {
+            for (let x = 0; x < COLS; x++) {
+                let tile = currentMap[y][x];
+                let px = x * TILE_SIZE;
+                let py = y * TILE_SIZE;
+
+                if (tile === '#' || tile === '-') {
+                    drawRealisticWall(px, py);
+                } else if (tile === 'X') {
+                    drawRealisticSpike(px, py);
+                } else if (tile === 'S') {
+                    drawRealisticStar(px, py);
+                } else if (tile === 'D') {
+                    drawRealisticDoor(px, py);
+                }
+            }
+        }
+
+        for (let enemy of enemies) drawTeacher(enemy);
+        drawRealisticBond(p2); 
+        drawRealisticAnya(p1);
+    }
+
+    function drawRealisticWall(x, y) {
+        ctx.fillStyle = PALETTE.wallBase;
+        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+        
+        // Elegant gold trim
+        ctx.fillStyle = '#b7950b';
+        ctx.fillRect(x, y, TILE_SIZE, 3);
+        ctx.fillRect(x, y + TILE_SIZE - 3, TILE_SIZE, 3);
+        
+        // Pattern inside wall
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x+5, y+5, TILE_SIZE-10, TILE_SIZE-10);
+    }
+
+    function drawRealisticSpike(x, y) {
+        ctx.fillStyle = PALETTE.spike;
+        ctx.beginPath();
+        ctx.moveTo(x, y + TILE_SIZE);
+        ctx.lineTo(x + TILE_SIZE/2, y + 10);
+        ctx.lineTo(x + TILE_SIZE, y + TILE_SIZE);
+        ctx.fill();
+        // Metallic Shine
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.moveTo(x + 10, y + TILE_SIZE);
+        ctx.lineTo(x + TILE_SIZE/2, y + 10);
+        ctx.lineTo(x + TILE_SIZE/2 + 3, y + 20);
+        ctx.fill();
+    }
+
+    function drawRealisticStar(x, y) {
+        let cx = x + TILE_SIZE/2;
+        let cy = y + TILE_SIZE/2 + Math.sin(Date.now() / 250) * 4; 
+        
+        ctx.save();
+        ctx.translate(cx, cy);
+        
+        // Stella Star Glow
+        let gradient = ctx.createRadialGradient(0, 0, 5, 0, 0, 25);
+        gradient.addColorStop(0, '#fff');
+        gradient.addColorStop(0.4, '#ffd700');
+        gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, 25, 0, Math.PI*2);
+        ctx.fill();
+
+        // Star Shape
+        ctx.beginPath();
+        ctx.fillStyle = '#fff7e6';
+        for (let i = 0; i < 5; i++) {
+            ctx.lineTo(Math.cos((18 + i * 72) * Math.PI / 180) * 14, 
+                       -Math.sin((18 + i * 72) * Math.PI / 180) * 14);
+            ctx.lineTo(Math.cos((54 + i * 72) * Math.PI / 180) * 6, 
+                       -Math.sin((54 + i * 72) * Math.PI / 180) * 6);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function drawRealisticDoor(x, y) {
+        let isOpen = keysCollected >= totalKeys;
+        
+        // Door Frame
+        ctx.fillStyle = '#594a2a';
+        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+        
+        // Door Panel
+        ctx.fillStyle = isOpen ? '#2ecc71' : PALETTE.doorClosed;
+        ctx.beginPath();
+        ctx.arc(x + TILE_SIZE/2, y + TILE_SIZE/2, TILE_SIZE/2 - 4, Math.PI, 0);
+        ctx.lineTo(x + TILE_SIZE - 4, y + TILE_SIZE);
+        ctx.lineTo(x + 4, y + TILE_SIZE);
+        ctx.fill();
+        
+        // Gold Knob
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath();
+        ctx.arc(x + TILE_SIZE - 12, y + TILE_SIZE/2 + 5, 3, 0, Math.PI*2);
+        ctx.fill();
+    }
+
+    function drawTeacher(t) {
+        let x = t.x;
+        let y = t.y;
+        let w = t.width;
+        let h = t.height;
+        let facingRight = t.vx > 0;
+        
+        // ELEGANCE!!
+        
+        // Suit
+        ctx.fillStyle = '#2c3e50';
+        ctx.beginPath();
+        ctx.moveTo(x + 5, y + 15);
+        ctx.lineTo(x + w - 5, y + 15);
+        ctx.lineTo(x + w - 5, y + h - 5);
+        ctx.lineTo(x + 5, y + h - 5);
+        ctx.fill();
+
+        // White Shirt
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.moveTo(x + w/2, y + 15);
+        ctx.lineTo(x + w/2 - 5, y + 25);
+        ctx.lineTo(x + w/2 + 5, y + 25);
+        ctx.fill();
+
+        // Head
+        ctx.fillStyle = '#f1c40f'; // Skin (Stylized)
+        ctx.beginPath();
+        ctx.arc(x + w/2, y + 10, 10, 0, Math.PI*2);
+        ctx.fill();
+
+        // White Beard & Hair
+        ctx.fillStyle = '#ecf0f1';
+        ctx.beginPath();
+        ctx.arc(x + w/2, y + 8, 11, Math.PI, 0); // Top hair
+        ctx.fill();
+        // Beard
+        ctx.beginPath();
+        ctx.moveTo(x + w/2 - 8, y + 12);
+        ctx.quadraticCurveTo(x + w/2, y + 25, x + w/2 + 8, y + 12);
+        ctx.fill();
+        
+        // Monocle
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        let eyeX = facingRight ? x + w/2 + 4 : x + w/2 - 4;
+        ctx.arc(eyeX, y + 8, 3, 0, Math.PI*2);
+        ctx.stroke();
+    }
+
+    function drawRealisticAnya(p) {
+        let x = p.x;
+        let y = p.y;
+        let w = p.width; // 24 collision
+        let drawW = 32;  // visual
+        let h = p.height;
+        let bounce = p.onGround ? (Math.abs(p.vx) > 0 ? Math.sin(Date.now()/80) * 2 : 0) : -2;
+
+        ctx.save();
+        let centerX = x + w/2;
+        ctx.translate(centerX, y);
+        if (!p.facingRight) ctx.scale(-1, 1);
+        let dx = -drawW/2;
+
+        // Dress
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.moveTo(dx + drawW/2, 16 + bounce);
+        ctx.lineTo(dx + drawW - 4, h + bounce);
+        ctx.quadraticCurveTo(dx + drawW/2, h + 4 + bounce, dx + 4, h + bounce);
+        ctx.fill();
+
+        // Head
+        ctx.fillStyle = '#ffe0bd';
+        ctx.beginPath();
+        ctx.arc(dx + drawW/2, 10 + bounce, 11, 0, Math.PI*2);
+        ctx.fill();
+
+        // Pink Hair
+        ctx.fillStyle = PALETTE.anyaHair;
+        ctx.beginPath();
+        ctx.arc(dx + drawW/2, 8 + bounce, 12, Math.PI, 0); 
+        ctx.lineTo(dx + drawW, 20 + bounce);
+        ctx.lineTo(dx, 20 + bounce);
+        ctx.fill();
+        
+        // Horns
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.moveTo(dx + 2, 6 + bounce);
+        ctx.lineTo(dx - 3, -4 + bounce);
+        ctx.lineTo(dx + 7, 4 + bounce);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(dx + drawW - 2, 6 + bounce);
+        ctx.lineTo(dx + drawW + 3, -4 + bounce);
+        ctx.lineTo(dx + drawW - 7, 4 + bounce);
+        ctx.fill();
+
+        // Anya Eyes (Green)
+        ctx.fillStyle = '#2ecc71';
+        ctx.beginPath();
+        ctx.arc(dx + drawW/2 + 4, 11 + bounce, 2.5, 0, Math.PI*2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(dx + drawW/2 - 4, 11 + bounce, 2.5, 0, Math.PI*2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    function drawRealisticBond(p) {
+        let x = p.x;
+        let y = p.y;
+        let w = p.width; // 32
+        let drawW = 48;
+        let h = p.height;
+        let bounce = p.onGround ? (Math.abs(p.vx) > 0 ? Math.sin(Date.now()/100) * 1.5 : 0) : 0;
+
+        ctx.save();
+        let centerX = x + w/2;
+        ctx.translate(centerX, y);
+        if (!p.facingRight) ctx.scale(-1, 1);
+        let dx = -drawW/2;
+
+        // Big Fluffy Body
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.ellipse(dx + drawW/2, h/2 + 4 + bounce, drawW/2, h/2.5, 0, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Head
+        ctx.beginPath();
+        ctx.arc(dx + drawW - 12, 12 + bounce, 14, 0, Math.PI*2);
+        ctx.fill();
+
+        // Paws (Black)
+        ctx.fillStyle = '#222';
+        ctx.beginPath();
+        ctx.ellipse(dx + 10, h - 2 + bounce, 6, 4, 0, 0, Math.PI*2);
+        ctx.ellipse(dx + drawW - 10, h - 2 + bounce, 6, 4, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // Ears (Droopy Black)
+        ctx.beginPath();
+        ctx.moveTo(dx + drawW - 18, 6 + bounce);
+        ctx.quadraticCurveTo(dx + drawW - 35, 25 + bounce, dx + drawW - 15, 15 + bounce);
+        ctx.fill();
+
+        // Face
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(dx + drawW - 4, 12 + bounce, 2, 0, Math.PI*2); // Nose
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(dx + drawW - 16, 10 + bounce, 2, 0, Math.PI*2); // Eye
+        ctx.fill();
+
+        // Bowtie
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.moveTo(dx + drawW/2 + 10, h/2 + bounce);
+        ctx.lineTo(dx + drawW/2 + 20, h/2 + bounce);
+        ctx.lineTo(dx + drawW/2 + 15, h/2 + 6 + bounce);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    function gameLoop() {
+        if(gameState === 'PLAYING') {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+    }
+
+    // Start
+    init();
+</script>
+</body>
+</html>
